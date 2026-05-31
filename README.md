@@ -149,4 +149,4 @@ Patterns sourced from Boris Cherny's public writing on how he uses Claude Code (
 
 ---
 
-MIT License — built with [Claude Code](https://claude.ai/claude-code).
+MIT License
