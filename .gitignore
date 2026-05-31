@@ -1,0 +1,32 @@
+# Claude Code: track commands/agents/hooks, ignore local-only state
+.claude/settings.local.json
+.claude/worktrees/
+.claude/shell-snapshots/
+
+# Scaffold prompt (not for end users)
+PROMPT.md
+
+# Dev/preview artifacts
+.playwright-mcp/
+*.png
+
+.env
+.env.local
+.env.*.local
+
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+*.log
+logs/
+
+.DS_Store
+Thumbs.db

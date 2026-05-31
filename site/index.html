@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>claude-code-scaffold</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #151210;
+      --bg2:         #1c1814;
+      --surface:     #221e1a;
+      --surface2:    #2a2520;
+      --border:      #3a342e;
+      --border-hi:   #C15F3C55;
+      --text:        #F4F3EE;
+      --muted:       #B1ADA1;
+      --dim:         #7a756e;
+      --accent:      #C15F3C;
+      --accent-dim:  #3a2018;
+      --accent-mid:  #7A4A2E;
+      --green:       #4a9e6b;
+      --green-dim:   #1a3024;
+      --yellow:      #d4a843;
+      --blue:        #6b9fd4;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --r: 8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(21,18,16,0.94);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .nav-logo-dot {
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.83rem;
+      color: var(--muted);
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .nav-gh {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.82rem !important;
+      color: var(--text) !important;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: border-color 0.15s !important;
+    }
+    .nav-gh:hover { border-color: var(--accent) !important; text-decoration: none !important; }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 5rem 2rem 3rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: center;
+    }
+
+    .hero-left {}
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 700;
+      line-height: 1.18;
+      letter-spacing: -0.025em;
+      margin-bottom: 1.1rem;
+      color: var(--text);
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      font-family: var(--mono);
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 1rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 2rem;
+      max-width: 420px;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--r);
+      transition: opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .btn-primary:hover { opacity: 0.85; text-decoration: none; }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.88rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--r);
+      transition: border-color 0.15s, color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
+
+    /* ── TERMINAL MOCK (hero) ── */
+    .terminal {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .terminal-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tl { width: 11px; height: 11px; border-radius: 50%; }
+    .tl-r { background: #ff5f57; }
+    .tl-y { background: #febc2e; }
+    .tl-g { background: #28c840; }
+
+    .terminal-title {
+      flex: 1;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--dim);
+    }
+
+    .terminal-body {
+      padding: 1.25rem 1.25rem 0.5rem;
+      line-height: 2;
+    }
+
+    .t-prompt  { color: var(--accent); }
+    .t-cmd     { color: var(--text); font-weight: 600; }
+    .t-q       { color: var(--yellow); }
+    .t-a       { color: var(--text); }
+    .t-ok      { color: var(--green); }
+    .t-dim     { color: var(--dim); }
+    .t-url     { color: var(--blue); }
+
+    .terminal-statusbar {
+      background: var(--accent);
+      padding: 0.3rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.7rem;
+      color: var(--bg);
+      font-weight: 600;
+    }
+
+    .sb-seg {
+      background: var(--accent-mid);
+      color: var(--text);
+      padding: 0 0.5rem;
+      border-radius: 3px;
+      font-size: 0.67rem;
+    }
+
+    /* ── INCLUDES ── */
+    .section-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    .section-wrap + .section-wrap { padding-top: 0; }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+    }
+
+    h2 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .lead {
+      color: var(--muted);
+      margin-bottom: 2rem;
+      max-width: 520px;
+      font-size: 0.95rem;
+    }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 0.65rem;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 0.9rem 1rem;
+      transition: border-color 0.15s;
+    }
+    .check-item:hover { border-color: var(--border-hi); }
+
+    .check-icon {
+      width: 17px; height: 17px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: var(--green);
+    }
+
+    .check-item strong {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text);
+      margin-bottom: 0.15rem;
+    }
+    .check-item span { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── BENEFITS ── */
+    .benefits-band {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .benefit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 1rem;
+    }
+
+    .benefit-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.25rem 1.35rem;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .benefit-card:hover { border-color: var(--border-hi); transform: translateY(-1px); }
+
+    .b-icon {
+      font-size: 1.3rem;
+      margin-bottom: 0.65rem;
+      display: block;
+    }
+
+    .benefit-card h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+    }
+
+    .benefit-card p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .benefit-card code {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      background: var(--surface2);
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      color: var(--accent);
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* ── HOOK DIAGRAM ── */
+    .diagram-terminal {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .diagram-body {
+      padding: 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.9;
+      white-space: pre;
+      overflow-x: auto;
+      color: var(--text);
+    }
+
+    .d-event { color: var(--yellow); }
+    .d-hook  { color: var(--accent); font-weight: 700; }
+    .d-note  { color: var(--dim); }
+    .d-arrow { color: var(--dim); }
+
+    /* ── TABLES ── */
+    .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead { background: var(--surface2); }
+
+    th {
+      text-align: left;
+      padding: 0.65rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    td:first-child {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      white-space: nowrap;
+      width: 1%;
+    }
+
+    td strong { color: var(--text); font-weight: 500; }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-family: var(--mono);
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 3px;
+      padding: 0.1rem 0.35rem;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+
+    /* ── INSTALL ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 26px; height: 26px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 1px;
+    }
+
+    .step strong { display: block; font-size: 0.9rem; color: var(--text); }
+    .step span   { font-size: 0.84rem; color: var(--muted); }
+    .step code   {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--surface);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      color: var(--accent);
+    }
+
+    .install-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 0;
+    }
+
+    .tab-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-right: none;
+      color: var(--dim);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      padding: 0.45rem 1rem;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .tab-btn:first-child { border-radius: 6px 0 0 0; }
+    .tab-btn:last-child  { border-radius: 0 6px 0 0; border-right: 1px solid var(--border); }
+    .tab-btn.active { background: var(--surface); color: var(--accent); }
+
+    .tab-panel {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0 var(--r) var(--r) var(--r);
+      padding: 1.25rem 1.5rem;
+    }
+    .tab-panel.active { display: block; }
+    .tab-panel pre {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--text);
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.84rem;
+    }
+
+    footer .attr {
+      font-size: 0.78rem;
+      color: var(--dim);
+      line-height: 1.7;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 720px) {
+      .hero { grid-template-columns: 1fr; gap: 2rem; padding: 3rem 1rem 2rem; }
+      .section-wrap { padding: 3rem 1rem; }
+      .nav-links li:not(:last-child) { display: none; }
+      h2 { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <span class="nav-logo">
+      <span class="nav-logo-dot"></span>
+      claude-code-scaffold
+    </span>
+    <ul class="nav-links">
+      <li><a href="#includes">Includes</a></li>
+      <li><a href="#benefits">Benefits</a></li>
+      <li><a href="#hooks">Hooks</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="https://github.com/pateljatin/claude-code-scaffold" class="nav-gh">&#9679; GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="section-wrap" style="padding-bottom:2rem;">
+  <div class="hero" style="padding:0; margin:0; max-width:100%;">
+
+    <div class="hero-left">
+      <div class="hero-eyebrow">GitHub template</div>
+      <h1>Bootstrap <em>Claude Code</em><br>for any project</h1>
+      <p class="hero-sub">
+        Hooks, slash commands, sub-agents, a hardened PR assistant,
+        and a pre-filled CLAUDE.md. Configured in one interactive
+        command inside Claude Code.
+      </p>
+      <div class="hero-cta">
+        <a href="#install" class="btn-primary">Get started</a>
+        <a href="https://github.com/pateljatin/claude-code-scaffold" class="btn-ghost">View source</a>
+      </div>
+    </div>
+
+    <!-- Terminal mock showing /scaffold session -->
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="tl tl-r"></span>
+        <span class="tl tl-y"></span>
+        <span class="tl tl-g"></span>
+        <span class="terminal-title">Claude Code &mdash; /scaffold</span>
+      </div>
+      <div class="terminal-body">
+<span class="t-prompt">&gt;</span> <span class="t-cmd">/scaffold</span>
+
+<span class="t-q">What is your project name?</span>
+<span class="t-a">my-app</span>
+
+<span class="t-q">Your name or handle?</span>
+<span class="t-a">jatin</span>
+
+<span class="t-q">One-line description?</span>
+<span class="t-a">Real-time dashboard for...</span>
+
+<span class="t-q">Primary stack?</span>
+<span class="t-a">Next.js</span>
+
+<span class="t-q">GitHub username?</span>
+<span class="t-a">pateljatin</span>
+
+<span class="t-ok">&#10003;</span> <span class="t-dim">Wrote .claude/settings.json</span>
+<span class="t-ok">&#10003;</span> <span class="t-dim">Wrote CLAUDE.md (38 lines)</span>
+<span class="t-ok">&#10003;</span> <span class="t-dim">Wrote 5 hooks, 5 commands, 3 agents</span>
+<span class="t-ok">&#10003;</span> <span class="t-dim">Wrote docs/claude/ templates</span>
+
+<span class="t-q">Create GitHub repo? [y/N]</span> <span class="t-a">y</span>
+<span class="t-ok">&#10003;</span> <span class="t-url">github.com/pateljatin/my-app</span>
+      </div>
+      <div class="terminal-statusbar">
+        <span>my-app</span>
+        <span class="sb-seg">main</span>
+        <span class="sb-seg">Sonnet 4.6</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- INCLUDES -->
+<div class="section-wrap" id="includes">
+  <p class="section-label">What you get</p>
+  <h2>Everything wired, nothing magic</h2>
+  <p class="lead">Plain files. No runtime, no framework, no npm install. Clone, run one command, answer five questions.</p>
+
+  <div class="checklist">
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>5 lifecycle hooks</strong>
+        <span>PostCompact, PreToolUse, Stop, PermissionRequest, UserPromptSubmit — each wired to a focused PowerShell script</span>
+      </div>
+    </div>
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>5 slash commands</strong>
+        <span>/scaffold, /new-feature, /post-merge, /commit-push-pr, /go — consistent workflows on every project</span>
+      </div>
+    </div>
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>3 sub-agents</strong>
+        <span>verify-app, security-reviewer, test-writer — scoped context, minimal tools, focused output</span>
+      </div>
+    </div>
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>Hardened PR assistant</strong>
+        <span>SHA-pinned actions, author association guard, fork protection, injection-safe comment handling</span>
+      </div>
+    </div>
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>CLAUDE.md under 100 lines</strong>
+        <span>Reference content lives in docs/claude/ loaded via @import — main file stays readable</span>
+      </div>
+    </div>
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>5 doc templates</strong>
+        <span>architecture, db-patterns, security, spec-rules, project-context — fill the blanks, not the structure</span>
+      </div>
+    </div>
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>Interactive /scaffold command</strong>
+        <span>Five questions inside Claude Code, all files written, GitHub repo optionally created</span>
+      </div>
+    </div>
+    <div class="check-item">
+      <span class="check-icon">&#10003;</span>
+      <div>
+        <strong>setup.ps1 + setup.sh</strong>
+        <span>Same five questions for non-Claude-Code setups and CI pipelines</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- BENEFITS -->
+<div class="benefits-band" id="benefits">
+  <div class="section-wrap">
+    <p class="section-label">Why it matters</p>
+    <h2>What you actually gain</h2>
+    <p class="lead">Each benefit maps directly to a specific file. These are not features — they are problems that bite without them.</p>
+
+    <div class="benefit-grid">
+      <div class="benefit-card">
+        <span class="b-icon">&#128200;</span>
+        <h3>Context survives compaction</h3>
+        <p>When Claude compacts a long conversation, the PostCompact hook reinjects your project facts from <code>.claude/context.md</code>. Claude never forgets what it's working on.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="b-icon">&#128181;</span>
+        <h3>Right model, right cost</h3>
+        <p>A mandatory model+effort rule means Haiku handles grep, Sonnet handles features, and Opus is reserved for architecture. No silent Opus runs on trivial edits.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="b-icon">&#128683;</span>
+        <h3>Standards enforced at write time</h3>
+        <p>The PreToolUse hook blocks banned phrases ("AI-powered," "leverage," "seamless") and em-dashes before they hit a file — not after a manual review catches them.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="b-icon">&#128737;</span>
+        <h3>Dangerous operations blocked</h3>
+        <p>The PermissionRequest hook auto-allows <code>Read</code>, <code>Glob</code>, <code>Grep</code> and blocks <code>rm -rf</code>, <code>DROP TABLE</code>, <code>git push --force</code> before they can run.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="b-icon">&#9881;</span>
+        <h3>Repeatable workflows</h3>
+        <p>Slash commands make commit, PR, post-merge, and feature planning identical every time — same steps, same checks, same output, regardless of who runs them.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="b-icon">&#128272;</span>
+        <h3>PR assistant that can't be hijacked</h3>
+        <p>Comment content is written via env var, never shell-interpolated. Author association and fork checks block unauthorized triggers before Claude ever runs.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- HOOKS -->
+<div class="section-wrap" id="hooks">
+  <p class="section-label">Architecture</p>
+  <h2>Hook lifecycle</h2>
+  <p class="lead">Five hooks, five scripts. Each is PowerShell with bash equivalents in comments.</p>
+
+  <div class="diagram-terminal">
+    <div class="terminal-bar">
+      <span class="tl tl-r"></span>
+      <span class="tl tl-y"></span>
+      <span class="tl tl-g"></span>
+      <span class="terminal-title">.claude/hooks/</span>
+    </div>
+    <div class="diagram-body"><span class="d-event">UserPromptSubmit</span>                       <span class="d-event">PreToolUse</span>
+<span class="d-arrow">      |</span>                                        <span class="d-arrow">|</span>
+<span class="d-arrow">      v</span>                                        <span class="d-arrow">v</span>
+<span class="d-hook">session-start-habits.ps1</span>              <span class="d-hook">banned-word-check.ps1</span>
+<span class="d-note">  fires once per session                 checks every write for banned phrases</span>
+<span class="d-note">  prints habits reminder                 exit 2 = hard block</span>
+
+<span class="d-event">PostCompact</span>                                    <span class="d-event">Stop</span>
+<span class="d-arrow">      |</span>                                        <span class="d-arrow">|</span>
+<span class="d-arrow">      v</span>                                        <span class="d-arrow">v</span>
+<span class="d-hook">post-compact-reinject.ps1</span>             <span class="d-hook">stop-baseline-check.ps1</span>
+<span class="d-note">  reads .claude/context.md               scans changed files for TODO/FIXME</span>
+<span class="d-note">  outputs it back into context            warns before Claude signs off</span>
+
+<span class="d-event">PermissionRequest</span>
+<span class="d-arrow">      |</span>
+<span class="d-arrow">      v</span>
+<span class="d-hook">permission-request-router.ps1</span>
+<span class="d-note">  auto-allows: Read, Glob, Grep, LS</span>
+<span class="d-note">  blocks:      rm -rf  DROP TABLE  git push --force</span></div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- COMMANDS -->
+<div class="section-wrap" id="commands">
+  <p class="section-label">Slash commands</p>
+  <h2>Built-in workflows</h2>
+  <p class="lead">Each command is a markdown file in <code style="font-family:var(--mono);font-size:0.85rem;color:var(--accent);">.claude/commands/</code>. Add your own for project-specific workflows.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>/scaffold</td>
+          <td><strong>Interactive setup.</strong> Five questions inside Claude Code. Writes every configured file, offers to create the GitHub repo.</td>
+        </tr>
+        <tr>
+          <td>/new-feature</td>
+          <td><strong>Plan before coding.</strong> Identifies files, approach, risks, model+effort. No code until approved. <span class="tag">planning only</span></td>
+        </tr>
+        <tr>
+          <td>/post-merge</td>
+          <td><strong>Post-merge checklist.</strong> Pull, delete branch, run tests, check deps, update docs. Fails loud if tests are red. <span class="tag">planning only</span></td>
+        </tr>
+        <tr>
+          <td>/commit-push-pr</td>
+          <td><strong>Ship a change.</strong> Runs tests, stages, commits with a well-formed message, pushes, opens PR with <code style="font-family:var(--mono);font-size:0.8rem;">gh pr create</code>.</td>
+        </tr>
+        <tr>
+          <td>/go</td>
+          <td><strong>Pick up the next task.</strong> Checks branch, open PRs, active goal, proposes model+effort, waits for confirmation.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- AGENTS -->
+<div class="section-wrap">
+  <p class="section-label">Sub-agents</p>
+  <h2>Specialists on demand</h2>
+  <p class="lead">Defined in <code style="font-family:var(--mono);font-size:0.85rem;color:var(--accent);">.claude/agents/</code>. Spawned with scoped context and minimal tool permissions.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Agent</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>verify-app</td>
+          <td><strong>Run and confirm.</strong> Starts the app, navigates to the relevant flow, checks for console errors and regressions, returns pass/fail with evidence.</td>
+        </tr>
+        <tr>
+          <td>security-reviewer</td>
+          <td><strong>Review before merge.</strong> Checks diffs for injection, hardcoded secrets, missing auth, path traversal, and known vulnerable dependencies.</td>
+        </tr>
+        <tr>
+          <td>test-writer</td>
+          <td><strong>Fill coverage gaps.</strong> Reads the module, matches existing test conventions, writes tests for happy path and edge cases, runs them, reports results.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- INSTALL -->
+<div class="section-wrap" id="install">
+  <p class="section-label">Get started</p>
+  <h2>Install</h2>
+  <p class="lead">Use this repo as a GitHub template, or apply the scaffold to an existing project with the setup scripts.</p>
+
+  <div class="steps">
+    <div class="step">
+      <span class="step-num">1</span>
+      <div>
+        <strong>Use this template on GitHub</strong>
+        <span>Click "Use this template" on the repo page. Clone your new repo locally.</span>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <div>
+        <strong>Open Claude Code in the directory</strong>
+        <span>Run <code>/scaffold</code> in the Claude Code prompt.</span>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <div>
+        <strong>Answer five questions</strong>
+        <span>Project name, your name, description, stack, GitHub username. Claude writes every configured file.</span>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">4</span>
+      <div>
+        <strong>Optionally create the GitHub repo</strong>
+        <span>Claude offers to run <code>gh repo create</code> at the end.</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:2rem;">Or: apply to an existing project</p>
+  <div class="install-tabs">
+    <button class="tab-btn active" onclick="showTab('win', this)">Windows</button>
+    <button class="tab-btn" onclick="showTab('mac', this)">Mac / Linux</button>
+  </div>
+  <div id="win" class="tab-panel active">
+    <pre>git clone https://github.com/pateljatin/claude-code-scaffold
+cd claude-code-scaffold
+.\setup.ps1 -Target C:\path\to\your-project</pre>
+  </div>
+  <div id="mac" class="tab-panel">
+    <pre>git clone https://github.com/pateljatin/claude-code-scaffold
+cd claude-code-scaffold
+./setup.sh /path/to/your-project</pre>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<hr class="divider">
+<footer>
+  <div class="footer-links">
+    <a href="https://github.com/pateljatin/claude-code-scaffold">GitHub</a>
+    <a href="https://github.com/pateljatin/claude-code-scaffold/issues">Issues</a>
+    <a href="https://github.com/pateljatin">Jatin Patel</a>
+  </div>
+  <p class="attr">
+    Patterns sourced from Boris Cherny's public writing on how he uses Claude Code
+    (he created Claude Code at Anthropic) and from the official Claude Code documentation.
+  </p>
+</footer>
+
+<script>
+  function showTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>
+
